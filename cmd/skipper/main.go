@@ -127,6 +127,8 @@ const (
 	maxIdleConnsBackendUsage             = "sets the maximum idle connections for all backend connections"
 	enableHopHeadersRemovalUsage         = "enables removal of Hop-Headers according to RFC-2616"
 	oauth2TokeninfoURLUsage              = "sets the default tokeninfo URL to query information about an incoming OAuth2 token in oauth2Tokeninfo filters"
+	oauth2IssuerURLUsage                 = "sets the default token issuer URL to query OpenID Connect configuration for oauth2Tokenintrospection filters"
+	oauth2TokenintrospectionURLUsage     = "sets the default tokenintrospection URL to query information about an incoming OAuth2 token in oauth2Tokenintrospection filters"
 	maxAuditBodyUsage                    = "sets the max body to read to log inthe audit log body"
 )
 
@@ -215,6 +217,8 @@ var (
 	predicatePlugins                pluginFlags
 	dataclientPlugins               pluginFlags
 	oauth2TokeninfoURL              string
+	oauth2IssuerURL                 string
+	oauth2TokenintrospectionURL     string
 	maxAuditBody                    int
 	multiPlugins                    pluginFlags
 )
@@ -302,6 +306,8 @@ func init() {
 	flag.Var(&predicatePlugins, "predicate-plugin", predicatePluginUsage)
 	flag.Var(&dataclientPlugins, "dataclient-plugin", dataclientPluginUsage)
 	flag.StringVar(&oauth2TokeninfoURL, "oauth2-tokeninfo-url", "", oauth2TokeninfoURLUsage)
+	flag.StringVar(&oauth2IssuerURL, "oauth2-issuer-url", "", oauth2IssuerURLUsage)
+	flag.StringVar(&oauth2TokenintrospectionURL, "oauth2-tokenintrospect-url", "", oauth2TokenintrospectionURLUsage)
 	flag.IntVar(&maxAuditBody, "max-audit-body", defaultMaxAuditBody, maxAuditBodyUsage)
 	flag.Var(&multiPlugins, "multi-plugin", multiPluginUsage)
 
@@ -428,6 +434,8 @@ func main() {
 		PredicatePlugins:                    predicatePlugins.Get(),
 		DataClientPlugins:                   dataclientPlugins.Get(),
 		OAuthTokeninfoURL:                   oauth2TokeninfoURL,
+		OAuthIssuerURL:                      oauth2IssuerURL,
+		OAuthTokenintrospectionURL:          oauth2TokenintrospectionURL,
 		MaxAuditBody:                        maxAuditBody,
 		Plugins:                             multiPlugins.Get(),
 	}
