@@ -644,18 +644,20 @@ func Run(o Options) error {
 	}
 
 	if o.OAuthTokeninfoURL != "" {
-		o.CustomFilters = append(o.CustomFilters, auth.NewOAuthTokeninfoAllScope(o.OAuthTokeninfoURL))
-		o.CustomFilters = append(o.CustomFilters, auth.NewOAuthTokeninfoAnyScope(o.OAuthTokeninfoURL))
-		o.CustomFilters = append(o.CustomFilters, auth.NewOAuthTokeninfoAllKV(o.OAuthTokeninfoURL))
-		o.CustomFilters = append(o.CustomFilters, auth.NewOAuthTokeninfoAnyKV(o.OAuthTokeninfoURL))
+		o.CustomFilters = append(o.CustomFilters,
+			auth.NewOAuthTokeninfoAllScope(o.OAuthTokeninfoURL),
+			auth.NewOAuthTokeninfoAnyScope(o.OAuthTokeninfoURL),
+			auth.NewOAuthTokeninfoAllKV(o.OAuthTokeninfoURL),
+			auth.NewOAuthTokeninfoAnyKV(o.OAuthTokeninfoURL))
 	}
 	o.CustomFilters = append(o.CustomFilters, logfilter.NewAuditLog(o.MaxAuditBody))
 
 	if o.OAuthIssuerURL != "" {
-		o.CustomFilters = append(o.CustomFilters, auth.NewOAuthTokenintrospectionAnyClaims(o.OAuthIssuerURL, o.OAuthTokenintrospectionURL))
-		o.CustomFilters = append(o.CustomFilters, auth.NewOAuthTokenintrospectionAllClaims(o.OAuthIssuerURL, o.OAuthTokenintrospectionURL))
-		o.CustomFilters = append(o.CustomFilters, auth.NewOAuthTokenintrospectionAnyKV(o.OAuthIssuerURL, o.OAuthTokenintrospectionURL))
-		o.CustomFilters = append(o.CustomFilters, auth.NewOAuthTokenintrospectionAllKV(o.OAuthIssuerURL, o.OAuthTokenintrospectionURL))
+		o.CustomFilters = append(o.CustomFilters,
+			auth.NewOAuthTokenintrospectionAnyClaims(o.OAuthIssuerURL, o.OAuthTokenintrospectionURL),
+			auth.NewOAuthTokenintrospectionAllClaims(o.OAuthIssuerURL, o.OAuthTokenintrospectionURL),
+			auth.NewOAuthTokenintrospectionAnyKV(o.OAuthIssuerURL, o.OAuthTokenintrospectionURL),
+			auth.NewOAuthTokenintrospectionAllKV(o.OAuthIssuerURL, o.OAuthTokenintrospectionURL))
 	}
 
 	// create a filter registry with the available filter specs registered,

@@ -237,10 +237,6 @@ func jsonGet(url *url.URL, auth string, doc interface{}) error {
 
 // jsonPost requests url with access token in the body, if auth was given and writes into doc.
 func jsonPost(u *url.URL, auth string, doc *tokenIntrospectionInfo) error {
-	if auth == "" {
-		return fmt.Errorf("invalid without auth")
-	}
-
 	body := url.Values{}
 	body.Add("token", auth)
 
@@ -276,7 +272,7 @@ func newAuthClient(baseURL string) (*authClient, error) {
 
 func (ac *authClient) getTokeninfo(token string) (map[string]interface{}, error) {
 	var a map[string]interface{}
-	err := jsonGet(ac.url, token, a)
+	err := jsonGet(ac.url, token, &a)
 	return a, err
 }
 
@@ -401,7 +397,7 @@ func (s *tokeninfoSpec) Name() string {
 // type. The shown example for checkOAuthTokeninfoAllScopes will grant
 // access only to tokens, that have scopes read-x and write-y:
 //
-//     s.CreateTokeninfoFilter(read-x", "write-y")
+//     s.CreateFilter(read-x", "write-y")
 //
 func (s *tokeninfoSpec) CreateFilter(args []interface{}) (filters.Filter, error) {
 	sargs, err := getStrings(args)
@@ -652,7 +648,7 @@ func newOAuthTokenintrospectionFilter(typ roleCheckType, oauthIssuerURL, oauthIn
 }
 
 func getOpenIDConfig(issuerURL string) (*openIDConfig, error) {
-	u, err := url.Parse(issuerURL + "/.well-known/openid-configuration")
+	u, err := url.Parse(issuerURL + tokenIntrospectionConfigPath)
 	if err != nil {
 		return nil, err
 	}
