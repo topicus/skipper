@@ -7,9 +7,12 @@ package log
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"os"
+	"regexp"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -27,6 +30,18 @@ const (
 	// reject reason information into the state bag to pass the
 	// information to the auditLog filter.
 	AuthRejectReasonKey = "auth-reject-reason"
+	// UnverifiedAuditLogName is th filtername seend by the user
+	UnverifiedAuditLogName = "unverifiedAuditLog"
+
+	UnverifiedAuditHeader = "X-Unverified-Audit"
+	authHeaderName        = "Authorization"
+	authHeaderPrefix      = "Bearer "
+	accessTokenQueryKey   = "access_token"
+	defaultSub            = "<invalid-sub>"
+)
+
+var (
+	re = regexp.MustCompile("^[a-zA-z0-9_/:?=&%@.#-]*$")
 )
 
 type auditLog struct {
@@ -156,4 +171,58 @@ func (al *auditLog) Response(ctx filters.FilterContext) {
 	if err != nil {
 		log.Errorf("Failed to json encode auditDoc: %v", err)
 	}
+}
+
+type unverifiedAuditLog struct{}
+
+// NewUnverifiedAuditLog logs "Sub" of the middle part of a JWT Token.
+func NewUnverifiedAuditLog() filters.Spec { return &unverifiedAuditLog{} }
+
+func (ual *unverifiedAuditLog) Name() string { return UnverifiedAuditLogName }
+
+// CreateFilter has no arguments. It creates the filter if the user
+// specifies unverifiedAuditLog() in their route.
+func (ual *unverifiedAuditLog) CreateFilter(args []interface{}) (filters.Filter, error) {
+	if len(args) != 0 {
+		return nil, filters.ErrInvalidFilterParameters
+	}
+	return ual, nil
+}
+
+type jwtMidPart struct {
+	Sub string `json:"sub"`
+}
+
+func (ual *unverifiedAuditLog) Request(ctx filters.FilterContext) {
+	req := ctx.Request()
+	ahead := req.Header.Get(authHeaderName)
+	if !strings.HasPrefix(ahead, authHeaderPrefix) {
+		return
+	}
+
+	fields := strings.FieldsFunc(ahead, func(r rune) bool {
+		return r == []rune(".")[0]
+	})
+	if len(fields) == 3 {
+		sDec, err := base64.RawStdEncoding.DecodeString(fields[1])
+		if err != nil {
+			return
+		}
+
+		var j jwtMidPart
+		err = json.Unmarshal(sDec, &j)
+		if err != nil {
+			return
+		}
+		req.Header.Add(UnverifiedAuditHeader, cleanSub(j.Sub))
+	}
+}
+
+func (*unverifiedAuditLog) Response(filters.FilterContext) {}
+
+func cleanSub(s string) string {
+	if re.MatchString(s) {
+		return s
+	}
+	return defaultSub
 }
