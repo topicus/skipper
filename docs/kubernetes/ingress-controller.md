@@ -1,14 +1,14 @@
 # Skipper Ingress Controller
 
 This documentation is meant for for cluster operators and describes
-how to install skipper as Ingress-Controller into your Kubernetes
+how to install Skipper as Ingress-Controller into your Kubernetes
 Cluster.
 
 ## Why you should use skipper as ingress controller?
 
 Baremetal loadbalancer perform really well, but the configuration is
 not updated frequently and most of these installations are not meant
-to rapidly change. With introducing kubernetes this will change and
+to rapidly change. With introducing Kubernetes this will change and
 there is a need of rapid changing http routers. Skipper is designed
 for rapidly changing it's routing tree.
 
@@ -18,12 +18,12 @@ features, that you can use to enhance your environment. For example
 ratelimits, circuitbreakers, blue-green deployments, shadow traffic
 and [more](ingress-usage.md).
 
-## What is an Ingress-Controller
+## What is an Ingress-Controller?
 
-Ingress-controllers are serving http requests into a kubernetes
+Ingress-controllers are serving http requests into a Kubernetes
 cluster. Most of the time traffic will pass ingress got to a
-kubernetes service IP which will forward the packets to kubernetes PODs
-selected by the kubernetes service.
+Kubernetes service IP which will forward the packets to Kubernetes Pods
+selected by the Kubernetes service.
 For having a successful ingress, you need to have a DNS name pointing
 to some stable IP addresses that act as a loadbalancer.
 
@@ -36,13 +36,34 @@ You would point your DNS entries to the
 loadbalancer in front of skipper, for example automated using
 [external-dns](https://github.com/kubernetes-incubator/external-dns).
 
+## Why skipper uses endpoints and not services?
+
+Skipper does not use [Kubernetes
+Services](http://kubernetes.io/docs/user-guide/services) to route
+traffic to the pods. Instead it uses the Endpoints API to bypass
+kube-proxy created iptables to remove overhead like conntrack entries
+for iptables DNAT. Skipper can also reuse connections to Pods, such
+that you have no overhead in establishing connections all the time. To
+prevent errors on node failures, Skipper also does automatically
+retries to another endpoint in case it gets a connection refused or
+TLS handshake error to the endpoint.  Other reasons are future support
+of features like session affinity, different loadbalancer
+algorithms or distributed loadbalancing also known as service mesh.
+
 ## AWS deployment
 
 In AWS, this could be an ALB with DNS pointing to the ALB. The ALB can
 then point to an ingress-controller running on an EC2 node and uses
-Kubernetes `hostnetwork` port specification in the POD spec.
+Kubernetes `hostnetwork` port specification in the Pod spec.
 
-![ingress-traffic-flow](../img/ingress-traffic-flow-aws.svg)
+A logical overview of the traffic flow in AWS is shown in this picture:
+
+![logical ingress-traffic-flow](../img/ingress-traffic-flow-aws.svg)
+
+We described that Skipper bypasses Kubernetes Service and use directly
+endpoints for [good reasons](https://opensource.zalando.com/skipper/kubernetes/ingress-controller/#why-skipper-uses-endpoints-and-not-services),
+therefore the real traffic flow is shown in the next picture.
+![technical ingress-traffic-flow](../img/ingress-traffic-flow-aws-technical.svg)
 
 ## Baremetal deployment
 
@@ -72,7 +93,7 @@ minimal example:
 * layer 4 loadbalancer has `1.2.3.4:80` as socket for a virtual server pointing to all skipper ingress
 * `*.ingress.example.com` points to 1.2.3.4
 * ingress object with host entry for `myapp.ingress.example.com` targets a service type ClusterIP
-* service type ClusterIP has a selector that targets your PODs of your myapp deployment
+* service type ClusterIP has a selector that targets your Pods of your myapp deployment
 
 TLS example:
 
@@ -100,7 +121,7 @@ traffic.
       namespace: kube-system
       labels:
         application: skipper-ingress
-        version: v0.9.115
+        version: v0.10.5
         component: ingress
     spec:
       selector:
@@ -113,7 +134,7 @@ traffic.
           name: skipper-ingress
           labels:
             application: skipper-ingress
-            version: v0.9.115
+            version: v0.10.5
             component: ingress
           annotations:
             scheduler.alpha.kubernetes.io/critical-pod: ''
@@ -131,7 +152,7 @@ traffic.
           hostNetwork: true
           containers:
           - name: skipper-ingress
-            image: registry.opensource.zalan.do/pathfinder/skipper:v0.9.115
+            image: registry.opensource.zalan.do/pathfinder/skipper:v0.10.5
             ports:
             - name: ingress-port
               containerPort: 9999
@@ -150,9 +171,6 @@ traffic.
               - "-metrics-flavour=codahale,prometheus"
               - "-enable-connection-metrics"
             resources:
-              limits:
-                cpu: 200m
-                memory: 200Mi
               requests:
                 cpu: 25m
                 memory: 25Mi
@@ -163,6 +181,9 @@ traffic.
               initialDelaySeconds: 5
               timeoutSeconds: 5
 
+Please check, that you are using the [latest
+release](https://github.com/zalando/skipper/releases/latest), we do
+not maintain the **latest** tag.
 
 We now deploy a simple demo application serving html:
 
@@ -180,7 +201,7 @@ We now deploy a simple demo application serving html:
         spec:
           containers:
           - name: skipper-demo
-            image: registry.opensource.zalan.do/pathfinder/skipper:v0.9.117
+            image: registry.opensource.zalan.do/pathfinder/skipper:v0.10.5
             args:
               - "skipper"
               - "-inline-routes"
@@ -369,7 +390,7 @@ daemonset:
           serviceAccountName: skipper-ingress
           containers:
           - name: skipper-ingress
-            image: registry.opensource.zalan.do/pathfinder/skipper:latest
+            image: registry.opensource.zalan.do/pathfinder/skipper:v0.10.5
             ports:
             - name: ingress-port
               containerPort: 9999
@@ -390,7 +411,7 @@ daemonset:
               - "-metrics-flavour=codahale,prometheus"
               - "-enable-connection-metrics"
             resources:
-              limits:
+              requests:
                 cpu: 200m
                 memory: 200Mi
             readinessProbe:
@@ -399,3 +420,52 @@ daemonset:
                 port: 9999
               initialDelaySeconds: 5
               timeoutSeconds: 5
+
+Please check, that you are using the [latest
+release](https://github.com/zalando/skipper/releases/latest), we do
+not maintain the **latest** tag.
+
+## Helm-based deployment
+
+[Helm](https://helm.sh/) calls itself the package manager for Kubernetes and therefore take cares of the deployment of whole applications including resources like services, configurations and so on.
+
+Skipper is also available as community contributed Helm chart in the public [quay.io](https://quay.io/repository/) registry.
+The latest packaged release can be found [here](https://quay.io/application/baez/skipper).
+The source code is available at [GitHub](https://github.com/baez90/skipper-helm).
+
+The chart includes resource definitions for the following use cases:
+
+- RBAC
+- CoreOS [Prometheus-Operator](https://github.com/coreos/prometheus-operator)
+
+As this chart is not maintained by the Skipper developers and is still under development only the basic deployment workflow is covered here.
+Check the GitHub repository for all details.
+
+To be able to deploy the chart you will need the following components:
+
+- `helm` CLI (Install guide [here](https://github.com/kubernetes/helm))
+- Helm registry plugin (available [here](https://github.com/app-registry/appr-helm-plugin))
+
+If your environment is setup correctly you should be able to run `helm version --client` and `helm registry version quay.io` and get some information about your tooling without any error.
+
+It is possible to deploy the chart without any further configuration like this:
+
+    helm registry upgrade quay.io/baez/skipper -- \
+        --install \
+        --wait \
+        "<your release name e.g. skipper>"
+
+The `--wait` switch can be omitted as it only takes care that Helm is waiting until the chart is completely deployed (meaning all resources are created).
+
+To update the deployment to a newer version the same command can be used.
+
+If you have RBAC enabled in your Kubernetes instance you don't have to create all the previously described resources on your own but you can let Helm create them by simply adding one more switch:
+
+    helm registry upgrade quay.io/baez/skipper -- \
+        --install \
+        --wait \
+        --set rbac.create=true \
+        "<your release name e.g. skipper>"
+
+There are some more options available for customization of the chart.
+Check the repository if you need more configuration possibilities.

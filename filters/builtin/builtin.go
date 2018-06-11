@@ -14,6 +14,7 @@ import (
 	logfilter "github.com/zalando/skipper/filters/log"
 	"github.com/zalando/skipper/filters/ratelimit"
 	"github.com/zalando/skipper/filters/tee"
+	"github.com/zalando/skipper/filters/tracing"
 	"github.com/zalando/skipper/loadbalancer"
 	"github.com/zalando/skipper/script"
 )
@@ -108,6 +109,7 @@ func MakeRegistry() filters.Registry {
 		script.NewLuaScript(),
 		cors.NewOrigin(),
 		logfilter.NewUnverifiedAuditLog(),
+		tracing.NewSpanName(),
 	} {
 		r.Register(s)
 	}

@@ -46,6 +46,9 @@ const DefaultPluginDir = "./plugins"
 // Options to start skipper.
 type Options struct {
 
+	// WhitelistedHealthcheckCIDR appends the whitelisted IP Range to the inernalIPS range for healthcheck purposes
+	WhitelistedHealthCheckCIDR []string
+
 	// Network address that skipper should listen on.
 	Address string
 
@@ -99,6 +102,10 @@ type Options struct {
 	// the ingresses without an annotation, or an empty annotation, will
 	// be loaded, too.
 	KubernetesIngressClass string
+
+	// PathMode controls the default interpretation of ingress paths in cases
+	// when the ingress doesn't specify it with an annotation.
+	KubernetesPathMode kubernetes.PathMode
 
 	// *DEPRECATED* API endpoint of the Innkeeper service, storing route definitions.
 	InnkeeperUrl string
@@ -360,6 +367,10 @@ type Options struct {
 	// OpenTracing enables opentracing
 	OpenTracing []string
 
+	// OpenTracingInitialSpan can override the default initial, pre-routing, span name.
+	// Default: "ingress".
+	OpenTracingInitialSpan string
+
 	// PluginDir defines the directory to load plugins from, DEPRECATED, use PluginDirs
 	PluginDir string
 	// PluginDirs defines the directories to load plugins from
@@ -493,12 +504,14 @@ func createDataClients(o Options, auth innkeeper.Authentication) ([]routing.Data
 
 	if o.Kubernetes {
 		kubernetesClient, err := kubernetes.New(kubernetes.Options{
-			KubernetesInCluster:    o.KubernetesInCluster,
-			KubernetesURL:          o.KubernetesURL,
-			ProvideHealthcheck:     o.KubernetesHealthcheck,
-			ProvideHTTPSRedirect:   o.KubernetesHTTPSRedirect,
-			IngressClass:           o.KubernetesIngressClass,
-			ReverseSourcePredicate: o.ReverseSourcePredicate,
+			KubernetesInCluster:        o.KubernetesInCluster,
+			KubernetesURL:              o.KubernetesURL,
+			ProvideHealthcheck:         o.KubernetesHealthcheck,
+			ProvideHTTPSRedirect:       o.KubernetesHTTPSRedirect,
+			IngressClass:               o.KubernetesIngressClass,
+			ReverseSourcePredicate:     o.ReverseSourcePredicate,
+			WhitelistedHealthCheckCIDR: o.WhitelistedHealthCheckCIDR,
+			PathMode:                   o.KubernetesPathMode,
 		})
 		if err != nil {
 			return nil, err
@@ -820,10 +833,15 @@ func Run(o Options) error {
 			return err
 		}
 		proxyParams.OpenTracer = tracer
+		proxyParams.OpenTracingInitialSpan = o.OpenTracingInitialSpan
 	} else {
 		// always have a tracer available, so filter authors can rely on the
 		// existence of a tracer
 		proxyParams.OpenTracer, _ = tracing.LoadTracingPlugin(o.PluginDirs, []string{"noop"})
+	}
+
+	if proxyParams.OpenTracingInitialSpan != "" {
+		proxyParams.OpenTracingInitialSpan = o.OpenTracingInitialSpan
 	}
 
 	// create the proxy
