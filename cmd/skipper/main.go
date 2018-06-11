@@ -126,12 +126,11 @@ const (
 	kubernetesPathModeUsage         = "controls the default interpretation of Kubernetes ingress paths: kubernetes-ingress/path-regexp/path-prefix"
 
 	// OAuth2:
-	oauthURLUsage                    = "OAuth2 URL for Innkeeper authentication"
-	oauthCredentialsDirUsage         = "directory where oauth credentials are stored: client.json and user.json"
-	oauthScopeUsage                  = "the whitespace separated list of oauth scopes"
-	oauth2TokeninfoURLUsage          = "sets the default tokeninfo URL to query information about an incoming OAuth2 token in oauth2Tokeninfo filters"
-	oauth2IssuerURLUsage             = "sets the default token issuer URL to query OpenID Connect configuration for oauth2Tokenintrospection filters"
-	oauth2TokenintrospectionURLUsage = "sets the default tokenintrospection URL to query information about an incoming OAuth2 token in oauth2Tokenintrospection filters"
+	oauthURLUsage            = "OAuth2 URL for Innkeeper authentication"
+	oauthCredentialsDirUsage = "directory where oauth credentials are stored: client.json and user.json"
+	oauthScopeUsage          = "the whitespace separated list of oauth scopes"
+	oauth2TokeninfoURLUsage  = "sets the default tokeninfo URL to query information about an incoming OAuth2 token in oauth2Tokeninfo filters"
+	oauth2IssuerURLUsage     = "sets the default token issuer URL to query OpenID Connect configuration for oauth2Tokenintrospection filters"
 
 	// connections, timeouts:
 	idleConnsPerHostUsage           = "maximum idle connections per backend host"
@@ -237,6 +236,7 @@ var (
 	oauthScope          string
 	oauthCredentialsDir string
 	oauth2TokeninfoURL  string
+	oauth2IssuerURL     string
 
 	// connections, timeouts:
 	idleConnsPerHost           int
@@ -493,12 +493,11 @@ func main() {
 		KubernetesPathMode:         kubernetesPathMode,
 
 		// OAuth2:
-		OAuthUrl:                   oauthURL,
-		OAuthScope:                 oauthScope,
-		OAuthCredentialsDir:        oauthCredentialsDir,
-		OAuthTokeninfoURL:          oauth2TokeninfoURL,
-		OAuthIssuerURL:             oauth2IssuerURL,
-		OAuthTokenintrospectionURL: oauth2TokenintrospectionURL,
+		OAuthUrl:            oauthURL,
+		OAuthScope:          oauthScope,
+		OAuthCredentialsDir: oauthCredentialsDir,
+		OAuthTokeninfoURL:   oauth2TokeninfoURL,
+		OAuthIssuerURL:      oauth2IssuerURL,
 
 		// connections, timeouts:
 		IdleConnectionsPerHost:  idleConnsPerHost,
