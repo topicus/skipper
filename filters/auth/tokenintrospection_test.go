@@ -214,6 +214,7 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 				}
 			}))
 			t.Logf("listen authserver: %v, backend: %v", authServer.Listener.Addr(), backend.Listener.Addr())
+			testOidcConfig.IntrospectionEndpoint = authServer.Listener.Addr().String()
 			defer authServer.Close()
 
 			var s filters.Spec
