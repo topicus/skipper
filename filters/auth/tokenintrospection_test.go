@@ -30,6 +30,13 @@ var testOidcConfig *OpenIDConfig = &OpenIDConfig{
 	CodeChallengeMethodsSupported:     []string{"plain", "S256"},
 }
 
+var (
+	validClaim1      = "email"
+	validClaim1Value = "jdoe@example.com"
+	validClaim2      = "name"
+	validClaim2Value = "Jane Doe"
+)
+
 func TestOAuth2Tokenintrospection(t *testing.T) {
 	for _, ti := range []struct {
 		msg         string
@@ -51,30 +58,38 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 		auth:        "invalid-token",
 		expected:    http.StatusNotFound,
 	}, {
-		msg:         "invalid scope",
+		msg:         "unsupported claim",
 		authType:    OAuthTokenintrospectionAnyClaimsName,
 		authBaseURL: testAuthPath,
-		args:        []interface{}{"not-matching-scope"},
+		args:        []interface{}{"unsupported-claim"},
+		hasAuth:     true,
+		auth:        testToken,
+		expected:    http.StatusNotFound,
+	}, {
+		msg:         "invalid claim",
+		authType:    OAuthTokenintrospectionAnyClaimsName,
+		authBaseURL: testAuthPath,
+		args:        []interface{}{validClaim1, validClaim2},
 		hasAuth:     true,
 		auth:        testToken,
 		expected:    http.StatusUnauthorized,
-		// }, {
-		// 	msg:         "oauthTokenintrospectionAnyClaim: valid token, one valid scope",
-		// 	authType:    OAuthTokenintrospectionAnyClaimsName,
-		// 	authBaseURL: testAuthPath,
-		// 	args:        []interface{}{testScope},
-		// 	hasAuth:     true,
-		// 	auth:        testToken,
-		// 	expected:    http.StatusOK,
-		// }, {
-		// 	msg:         "OAuthTokenintrospectionAnyClaimsName: valid token, one valid scope, one invalid scope",
-		// 	authType:    OAuthTokenintrospectionAnyClaimsName,
-		// 	authBaseURL: testAuthPath,
-		// 	args:        []interface{}{testScope, "other-scope"},
-		// 	hasAuth:     true,
-		// 	auth:        testToken,
-		// 	expected:    http.StatusOK,
-		// }, {
+	}, {
+		msg:         "oauthTokenintrospectionAnyClaim: valid token, one valid claim",
+		authType:    OAuthTokenintrospectionAnyClaimsName,
+		authBaseURL: testAuthPath,
+		args:        []interface{}{validClaim1, validClaim2},
+		hasAuth:     true,
+		auth:        testToken,
+		expected:    http.StatusOK,
+	}, {
+		msg:         "OAuthTokenintrospectionAnyClaimsName: valid token, one valid claim, one invalid claim value",
+		authType:    OAuthTokenintrospectionAnyClaimsName,
+		authBaseURL: testAuthPath,
+		args:        []interface{}{validClaim1, validClaim1Value, validClaim2, "invalidClaimValue"},
+		hasAuth:     true,
+		auth:        testToken,
+		expected:    http.StatusOK,
+	}, {
 		// 	msg:         "oauthTokenintrospectionAllClaim(): valid token, valid scopes",
 		// 	authType:    OAuthTokenintrospectionAllClaimsName,
 		// 	authBaseURL: testAuthPath,
@@ -90,22 +105,22 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 		// 	hasAuth:     true,
 		// 	auth:        testToken,
 		// 	expected:    http.StatusUnauthorized,
-	}, {
-		msg:         "anyKV(): invalid key",
-		authType:    OAuthTokenintrospectionAnyKVName,
-		authBaseURL: testAuthPath,
-		args:        []interface{}{"not-matching-scope"},
-		hasAuth:     true,
-		auth:        testToken,
-		expected:    http.StatusNotFound,
-	}, {
-		msg:         "anyKV(): valid token, one valid key, wrong value",
-		authType:    OAuthTokenintrospectionAnyKVName,
-		authBaseURL: testAuthPath,
-		args:        []interface{}{testKey, "other-value"},
-		hasAuth:     true,
-		auth:        testToken,
-		expected:    http.StatusUnauthorized,
+		// }, {
+		// 	msg:         "anyKV(): invalid key",
+		// 	authType:    OAuthTokenintrospectionAnyKVName,
+		// 	authBaseURL: testAuthPath,
+		// 	args:        []interface{}{"not-matching-scope"},
+		// 	hasAuth:     true,
+		// 	auth:        testToken,
+		// 	expected:    http.StatusNotFound,
+		// }, {
+		// 	msg:         "anyKV(): valid token, one valid key, wrong value",
+		// 	authType:    OAuthTokenintrospectionAnyKVName,
+		// 	authBaseURL: testAuthPath,
+		// 	args:        []interface{}{testKey, "other-value"},
+		// 	hasAuth:     true,
+		// 	auth:        testToken,
+		// 	expected:    http.StatusUnauthorized,
 		// }, {
 		// 	msg:         "anyKV(): valid token, one valid key value pair",
 		// 	authType:    OAuthTokenintrospectionAnyKVName,
@@ -130,22 +145,22 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 		// 	hasAuth:     true,
 		// 	auth:        testToken,
 		// 	expected:    http.StatusOK,
-	}, {
-		msg:         "allKV(): invalid key",
-		authType:    OAuthTokenintrospectionAllKVName,
-		authBaseURL: testAuthPath,
-		args:        []interface{}{"not-matching-scope"},
-		hasAuth:     true,
-		auth:        testToken,
-		expected:    http.StatusNotFound,
-	}, {
-		msg:         "allKV(): valid token, one valid key, wrong value",
-		authType:    OAuthTokenintrospectionAllKVName,
-		authBaseURL: testAuthPath,
-		args:        []interface{}{testKey, "other-value"},
-		hasAuth:     true,
-		auth:        testToken,
-		expected:    http.StatusUnauthorized,
+		// }, {
+		// 	msg:         "allKV(): invalid key",
+		// 	authType:    OAuthTokenintrospectionAllKVName,
+		// 	authBaseURL: testAuthPath,
+		// 	args:        []interface{}{"not-matching-scope"},
+		// 	hasAuth:     true,
+		// 	auth:        testToken,
+		// 	expected:    http.StatusNotFound,
+		// }, {
+		// 	msg:         "allKV(): valid token, one valid key, wrong value",
+		// 	authType:    OAuthTokenintrospectionAllKVName,
+		// 	authBaseURL: testAuthPath,
+		// 	args:        []interface{}{testKey, "other-value"},
+		// 	hasAuth:     true,
+		// 	auth:        testToken,
+		// 	expected:    http.StatusUnauthorized,
 		// }, {
 		// 	msg:         "allKV(): valid token, one valid key value pair",
 		// 	authType:    OAuthTokenintrospectionAllKVName,
@@ -170,15 +185,15 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 		// 	hasAuth:     true,
 		// 	auth:        testToken,
 		// 	expected:    http.StatusOK,
-	}, {
-		msg:         "allKV(): valid token, one valid kv, multiple key value pairs1",
-		authType:    OAuthTokenintrospectionAllKVName,
-		authBaseURL: testAuthPath,
-		args:        []interface{}{testKey, testValue, "wrongKey", "wrongValue"},
-		hasAuth:     true,
-		auth:        testToken,
-		expected:    http.StatusUnauthorized,
-	}, {
+		// }, {
+		// 	msg:         "allKV(): valid token, one valid kv, multiple key value pairs1",
+		// 	authType:    OAuthTokenintrospectionAllKVName,
+		// 	authBaseURL: testAuthPath,
+		// 	args:        []interface{}{testKey, testValue, "wrongKey", "wrongValue"},
+		// 	hasAuth:     true,
+		// 	auth:        testToken,
+		// 	expected:    http.StatusUnauthorized,
+		// }, {
 		msg:         "allKV(): valid token, one valid kv, multiple key value pairs2",
 		authType:    OAuthTokenintrospectionAllKVName,
 		authBaseURL: testAuthPath,
@@ -188,33 +203,53 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 		expected:    http.StatusUnauthorized,
 	}} {
 		t.Run(ti.msg, func(t *testing.T) {
+			if ti.msg == "" {
+				t.Fatalf("unknown ti: %+v", ti)
+			}
 			backend := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 
 			authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path != testAuthPath {
-					w.WriteHeader(http.StatusNotFound)
+				t.Log("authServer got a request")
+				if r.Method != "POST" {
+					w.WriteHeader(489) //(http.StatusNotFound)
 					return
 				}
 
+				if r.URL.Path != testAuthPath {
+					t.Logf("r.URL.Path: %s != %s :testAuthPath", r.URL.Path, testAuthPath)
+					w.WriteHeader(488) //(http.StatusNotFound)
+					return
+				}
+
+				t.Logf("getToken from request: formValue: %v, authheader: %v", r.FormValue(accessTokenKey), r.Header.Get("Authorization"))
 				token, err := getToken(r)
 				if err != nil || token != testToken {
+					t.Logf("token: %s == %s :testToken", token, testToken)
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
 
+				t.Log("got a valid token")
 				d := map[string]interface{}{
 					"uid":        testUID,
 					testRealmKey: testRealm,
-					"scope":      []string{testScope, testScope2, testScope3}}
+					//"scope":      []string{testScope, testScope2, testScope3},
+					"claims": map[string]string{
+						validClaim1: validClaim1Value,
+						validClaim2: validClaim2Value,
+					},
+				}
 
 				e := json.NewEncoder(w)
 				err = e.Encode(&d)
 				if err != nil {
 					t.Error(err)
 				}
+				t.Log("authserver end")
 			}))
-			t.Logf("listen authserver: %v, backend: %v", authServer.Listener.Addr(), backend.Listener.Addr())
-			testOidcConfig.IntrospectionEndpoint = authServer.Listener.Addr().String()
+
+			testOidcConfig.IntrospectionEndpoint = "http://" + authServer.Listener.Addr().String() + testAuthPath
+			t.Logf("testOidcConfig.IntrospectionEndpoint: %s", testOidcConfig.IntrospectionEndpoint)
 			defer authServer.Close()
 
 			var s filters.Spec
@@ -229,6 +264,8 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 				s = NewOAuthTokenintrospectionAnyKV(testOidcConfig)
 			case OAuthTokenintrospectionAllKVName:
 				s = NewOAuthTokenintrospectionAllKV(testOidcConfig)
+			default:
+				t.Fatalf("FATAL: authType '%s' not supported", ti.authType)
 			}
 
 			args = append(args, ti.args...)
@@ -237,6 +274,7 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 			r := &eskip.Route{Filters: []*eskip.Filter{{Name: s.Name(), Args: args}}, Backend: backend.URL}
 
 			proxy := proxytest.New(fr, r)
+
 			reqURL, err := url.Parse(proxy.URL)
 			if err != nil {
 				t.Errorf("Failed to parse url %s: %v", proxy.URL, err)
@@ -246,7 +284,7 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 			for _, name := range []string{"query"} { //, "header"} {
 				if ti.hasAuth && name == "query" {
 					q := reqURL.Query()
-					q.Add(accessTokenQueryKey, ti.auth)
+					q.Add(accessTokenKey, ti.auth)
 					reqURL.RawQuery = q.Encode()
 				}
 

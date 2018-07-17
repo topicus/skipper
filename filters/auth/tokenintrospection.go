@@ -3,6 +3,7 @@ package auth
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/zalando/skipper/filters"
@@ -57,10 +58,13 @@ type (
 
 func (ac *authClient) getTokenintrospect(token string) (tokenIntrospectionInfo, error) {
 	info := make(tokenIntrospectionInfo)
+	log.Infof("jsonPost(%s, %s, &info)", ac.url, token)
 	err := jsonPost(ac.url, token, &info)
 	if err != nil {
+		log.Infof("jsonPost result: %v", err)
 		return nil, err
 	}
+	log.Infof("res: %+v", info)
 	return info, err
 }
 
@@ -179,7 +183,8 @@ func (s *tokenIntrospectionSpec) CreateFilter(args []interface{}) (filters.Filte
 
 	ac, err := newAuthClient(s.introspectionURL)
 	if err != nil {
-		return nil, filters.ErrInvalidFilterParameters
+		return nil, fmt.Errorf("wrong s.introspectionURL: %s", s.introspectionURL)
+		//return nil, filters.ErrInvalidFilterParameters
 	}
 
 	f := &tokenintrospectFilter{
@@ -194,9 +199,10 @@ func (s *tokenIntrospectionSpec) CreateFilter(args []interface{}) (filters.Filte
 	case checkOAuthTokenintrospectionAnyClaims:
 		f.claims = sargs[:]
 		if s.config != nil && !all(f.claims, s.config.ClaimsSupported) {
-			return nil, errUnsupportedClaimSpecified
+			//return nil, errUnsupportedClaimSpecified
+			return nil, fmt.Errorf("%v: %s, supported Claims: %v", errUnsupportedClaimSpecified, strings.Join(f.claims, ","), s.config.ClaimsSupported)
 		}
-		fallthrough
+
 	// key value pairs
 	case checkOAuthTokenintrospectionAllKV:
 		fallthrough
@@ -230,7 +236,28 @@ func (f *tokenintrospectFilter) String() string {
 	return AuthUnknown
 }
 
+func (f *tokenintrospectFilter) validateAnyClaims(info tokenIntrospectionInfo) bool {
+	log.Infof("claims: %v, info: %+v", f.claims, info)
+	for _, v := range f.claims {
+		if _, ok := info[v]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+func (f *tokenintrospectFilter) validateAllClaims(info tokenIntrospectionInfo) bool {
+	log.Infof("claims: %v, info: %+v", f.claims, info)
+	for _, v := range f.claims {
+		if _, ok := info[v]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
 func (f *tokenintrospectFilter) validateAllKV(info tokenIntrospectionInfo) bool {
+	log.Info("validateAllKV")
 	for k, v := range f.kv {
 		v2, ok := info[k].(string)
 		if !ok || v != v2 {
@@ -241,6 +268,7 @@ func (f *tokenintrospectFilter) validateAllKV(info tokenIntrospectionInfo) bool 
 }
 
 func (f *tokenintrospectFilter) validateAnyKV(info tokenIntrospectionInfo) bool {
+	log.Info("validateAnyKV")
 	for k, v := range f.kv {
 		v2, ok := info[k].(string)
 		if ok && v == v2 {
@@ -251,6 +279,7 @@ func (f *tokenintrospectFilter) validateAnyKV(info tokenIntrospectionInfo) bool 
 }
 
 func (f *tokenintrospectFilter) Request(ctx filters.FilterContext) {
+	log.Info("handle request")
 	r := ctx.Request()
 
 	var info tokenIntrospectionInfo
@@ -261,6 +290,7 @@ func (f *tokenintrospectFilter) Request(ctx filters.FilterContext) {
 			unauthorized(ctx, "", missingToken, f.authClient.url.Hostname())
 			return
 		}
+
 		if token == "" {
 			unauthorized(ctx, "", missingToken, f.authClient.url.Hostname())
 			return
@@ -279,6 +309,7 @@ func (f *tokenintrospectFilter) Request(ctx filters.FilterContext) {
 		info = infoTemp.(tokenIntrospectionInfo)
 	}
 
+	log.Info("jsut before Sub")
 	sub, err := info.Sub()
 	if err != nil {
 		unauthorized(ctx, sub, invalidSub, f.authClient.url.Hostname())
@@ -288,14 +319,15 @@ func (f *tokenintrospectFilter) Request(ctx filters.FilterContext) {
 		unauthorized(ctx, sub, inactiveToken, f.authClient.url.Hostname())
 	}
 
+	log.Info("jsut before claims checks")
 	var allowed bool
 	switch f.typ {
 	case checkOAuthTokenintrospectionAnyClaims:
-		fallthrough
+		allowed = f.validateAnyClaims(info)
 	case checkOAuthTokenintrospectionAnyKV:
 		allowed = f.validateAnyKV(info)
 	case checkOAuthTokenintrospectionAllClaims:
-		fallthrough
+		allowed = f.validateAllClaims(info)
 	case checkOAuthTokenintrospectionAllKV:
 		allowed = f.validateAllKV(info)
 	default:

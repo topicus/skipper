@@ -226,7 +226,7 @@ func TestOAuth2Tokeninfo(t *testing.T) {
 			for _, name := range []string{"query", "header"} {
 				if ti.hasAuth && name == "query" {
 					q := reqURL.Query()
-					q.Add(accessTokenQueryKey, ti.auth)
+					q.Add(accessTokenKey, ti.auth)
 					reqURL.RawQuery = q.Encode()
 				}
 

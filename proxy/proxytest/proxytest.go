@@ -32,6 +32,7 @@ func WithParams(fr filters.Registry, proxyParams proxy.Params, routes ...*eskip.
 
 func newTestProxy(fr filters.Registry, routingOptions routing.Options, proxyParams proxy.Params, routes ...*eskip.Route) *TestProxy {
 	tl := loggingtest.New()
+	tl.Unmute()
 
 	if len(routingOptions.DataClients) == 0 {
 		dc := testdataclient.New(routes)

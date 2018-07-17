@@ -46,11 +46,12 @@ const (
 const (
 	AuthUnknown = "authUnknown"
 
-	authHeaderName      = "Authorization"
-	authHeaderPrefix    = "Bearer "
-	accessTokenQueryKey = "access_token"
-	scopeKey            = "scope"
-	uidKey              = "uid"
+	authHeaderName   = "Authorization"
+	authHeaderPrefix = "Bearer "
+	// accessTokenKey defined at https://tools.ietf.org/html/rfc7662#section-2.1
+	accessTokenKey = "access_token"
+	scopeKey       = "scope"
+	uidKey         = "uid"
 )
 
 type (
@@ -77,7 +78,11 @@ func (kv kv) String() string {
 }
 
 func getToken(r *http.Request) (string, error) {
-	if tok := r.URL.Query().Get(accessTokenQueryKey); tok != "" {
+	// TODO(sszuecs): GET should not be required and should not br used
+	// if tok := r.URL.Query().Get(accessTokenKey); tok != "" {
+	// 	return tok, nil
+	// }
+	if tok := r.FormValue(accessTokenKey); tok != "" {
 		return tok, nil
 	}
 
@@ -151,11 +156,11 @@ func intersect(left, right []string) bool {
 }
 
 // jsonGet requests url with access token in the URL query specified
-// by accessTokenQueryKey, if auth was given and writes into doc.
+// by accessTokenKey, if auth was given and writes into doc.
 func jsonGet(url *url.URL, auth string, doc interface{}) error {
 	if auth != "" {
 		q := url.Query()
-		q.Set(accessTokenQueryKey, auth)
+		q.Set(accessTokenKey, auth)
 		url.RawQuery = q.Encode()
 	}
 
@@ -181,7 +186,7 @@ func jsonGet(url *url.URL, auth string, doc interface{}) error {
 // jsonPost requests url with access token in the body, if auth was given and writes into doc.
 func jsonPost(u *url.URL, auth string, doc *tokenIntrospectionInfo) error {
 	body := url.Values{}
-	body.Add("token", auth)
+	body.Add(accessTokenKey, auth)
 
 	rsp, err := http.PostForm(u.String(), body)
 	if err != nil {
