@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/zalando/skipper/eskip"
@@ -238,6 +239,7 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 						validClaim1: validClaim1Value,
 						validClaim2: validClaim2Value,
 					},
+					"sub": "testSub",
 				}
 
 				e := json.NewEncoder(w)
@@ -280,19 +282,20 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 				t.Errorf("Failed to parse url %s: %v", proxy.URL, err)
 			}
 
-			// test accessToken in querystring and header
-			for _, name := range []string{"query"} { //, "header"} {
-				if ti.hasAuth && name == "query" {
-					q := reqURL.Query()
-					q.Add(accessTokenKey, ti.auth)
-					reqURL.RawQuery = q.Encode()
+			// test accessToken in form value and header
+			for _, name := range []string{"form"} { //, "header"} {
+				formdata := url.Values{}
+				if ti.hasAuth && name == "form" {
+					formdata.Add(accessTokenKey, ti.auth)
 				}
+				body := strings.NewReader(formdata.Encode())
 
-				req, err := http.NewRequest("GET", reqURL.String(), nil)
+				req, err := http.NewRequest("POST", reqURL.String(), body)
 				if err != nil {
-					t.Error(err)
+					t.Errorf("failed to create request %v", err)
 					return
 				}
+				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 				if ti.hasAuth && name == "header" {
 					req.Header.Set(authHeaderName, "Bearer "+url.QueryEscape(ti.auth))
@@ -300,7 +303,7 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 
 				rsp, err := http.DefaultClient.Do(req)
 				if err != nil {
-					t.Error(err)
+					t.Errorf("failed to get response: %v", err)
 				}
 
 				defer rsp.Body.Close()
@@ -309,8 +312,27 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 					t.Errorf("name=%s, filter(%s) failed got=%d, expected=%d, route=%s", name, s.Name(), rsp.StatusCode, ti.expected, r)
 					buf := make([]byte, rsp.ContentLength)
 					rsp.Body.Read(buf)
+					t.Logf("response buffer: %s", buf)
 				}
 			}
 		})
+	}
+}
+
+func Test_validateAnyClaims(t *testing.T) {
+	claims := []string{"email", "name"}
+	f := &tokenintrospectFilter{claims: claims}
+
+	info := tokenIntrospectionInfo{
+		"/realm": "/immortals",
+		"claims": map[string]string{
+			"email": "jdoe@example.com",
+			"name":  "Jane Doe",
+			"uid":   "jdoe",
+		},
+	}
+
+	if !f.validateAnyClaims(info) {
+		t.Error("failed to validate any claims")
 	}
 }

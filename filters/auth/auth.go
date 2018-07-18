@@ -3,6 +3,7 @@ package auth
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -199,7 +200,7 @@ func jsonPost(u *url.URL, auth string, doc *tokenIntrospectionInfo) error {
 	}
 	buf := make([]byte, rsp.ContentLength)
 	_, err = rsp.Body.Read(buf)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		log.Infof("Failed to read body: %v", err)
 		return err
 	}

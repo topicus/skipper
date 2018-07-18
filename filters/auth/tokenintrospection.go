@@ -25,14 +25,14 @@ type (
 		issuerURL        string
 		introspectionURL string
 		config           *OpenIDConfig
-		authClient       *authClient // TODO(sszuecs): might be different
+		authClient       *authClient
 	}
 
 	tokenIntrospectionInfo map[string]interface{}
 
 	tokenintrospectFilter struct {
 		typ        roleCheckType
-		authClient *authClient // TODO(sszuecs): might be different
+		authClient *authClient
 		claims     []string
 		kv         kv
 	}
@@ -58,13 +58,11 @@ type (
 
 func (ac *authClient) getTokenintrospect(token string) (tokenIntrospectionInfo, error) {
 	info := make(tokenIntrospectionInfo)
-	log.Infof("jsonPost(%s, %s, &info)", ac.url, token)
 	err := jsonPost(ac.url, token, &info)
 	if err != nil {
-		log.Infof("jsonPost result: %v", err)
 		return nil, err
 	}
-	log.Infof("res: %+v", info)
+	log.Infof("res: %+v", info) // TODO(sszuecs): drop this
 	return info, err
 }
 
@@ -237,20 +235,26 @@ func (f *tokenintrospectFilter) String() string {
 }
 
 func (f *tokenintrospectFilter) validateAnyClaims(info tokenIntrospectionInfo) bool {
-	log.Infof("claims: %v, info: %+v", f.claims, info)
+	log.Infof("AnyClaims: %#v, info: %#v", f.claims, info)
 	for _, v := range f.claims {
-		if _, ok := info[v]; ok {
-			return true
+		if claims, ok := info["claims"].(map[string]interface{}); ok {
+			if _, ok2 := claims[v]; ok2 {
+				return true
+			}
 		}
 	}
 	return false
 }
 
 func (f *tokenintrospectFilter) validateAllClaims(info tokenIntrospectionInfo) bool {
-	log.Infof("claims: %v, info: %+v", f.claims, info)
+	log.Infof("AllClaims: %#v, info: %#v", f.claims, info)
 	for _, v := range f.claims {
-		if _, ok := info[v]; !ok {
+		if claims, ok := info["claims"].(map[string]interface{}); !ok {
 			return false
+		} else {
+			if _, ok := claims[v]; !ok {
+				return false
+			}
 		}
 	}
 	return true
