@@ -235,10 +235,10 @@ func (f *tokenintrospectFilter) String() string {
 }
 
 func (f *tokenintrospectFilter) validateAnyClaims(info tokenIntrospectionInfo) bool {
-	log.Infof("AnyClaims: %#v, info: %#v", f.claims, info)
-	for _, v := range f.claims {
+	log.Infof("AnyClaims: %#v, info: %#v", f.claims, info) //TODO(sszuecs): drop this
+	for _, wantedClaim := range f.claims {
 		if claims, ok := info["claims"].(map[string]interface{}); ok {
-			if _, ok2 := claims[v]; ok2 {
+			if _, ok2 := claims[wantedClaim]; ok2 {
 				return true
 			}
 		}
@@ -247,7 +247,7 @@ func (f *tokenintrospectFilter) validateAnyClaims(info tokenIntrospectionInfo) b
 }
 
 func (f *tokenintrospectFilter) validateAllClaims(info tokenIntrospectionInfo) bool {
-	log.Infof("AllClaims: %#v, info: %#v", f.claims, info)
+	log.Infof("AllClaims: %#v, info: %#v", f.claims, info) //TODO(sszuecs): drop this
 	for _, v := range f.claims {
 		if claims, ok := info["claims"].(map[string]interface{}); !ok {
 			return false
@@ -261,7 +261,7 @@ func (f *tokenintrospectFilter) validateAllClaims(info tokenIntrospectionInfo) b
 }
 
 func (f *tokenintrospectFilter) validateAllKV(info tokenIntrospectionInfo) bool {
-	log.Info("validateAllKV")
+	log.Info("validateAllKV") //TODO(sszuecs): drop this
 	for k, v := range f.kv {
 		v2, ok := info[k].(string)
 		if !ok || v != v2 {
@@ -272,7 +272,7 @@ func (f *tokenintrospectFilter) validateAllKV(info tokenIntrospectionInfo) bool 
 }
 
 func (f *tokenintrospectFilter) validateAnyKV(info tokenIntrospectionInfo) bool {
-	log.Info("validateAnyKV")
+	log.Info("validateAnyKV") //TODO(sszuecs): drop this
 	for k, v := range f.kv {
 		v2, ok := info[k].(string)
 		if ok && v == v2 {
@@ -283,7 +283,7 @@ func (f *tokenintrospectFilter) validateAnyKV(info tokenIntrospectionInfo) bool 
 }
 
 func (f *tokenintrospectFilter) Request(ctx filters.FilterContext) {
-	log.Info("handle request")
+	log.Info("handle request") //TODO(sszuecs): drop this
 	r := ctx.Request()
 
 	var info tokenIntrospectionInfo
@@ -313,7 +313,7 @@ func (f *tokenintrospectFilter) Request(ctx filters.FilterContext) {
 		info = infoTemp.(tokenIntrospectionInfo)
 	}
 
-	log.Info("jsut before Sub")
+	log.Info("jsut before Sub") //TODO(sszuecs): drop this
 	sub, err := info.Sub()
 	if err != nil {
 		unauthorized(ctx, sub, invalidSub, f.authClient.url.Hostname())
@@ -323,7 +323,7 @@ func (f *tokenintrospectFilter) Request(ctx filters.FilterContext) {
 		unauthorized(ctx, sub, inactiveToken, f.authClient.url.Hostname())
 	}
 
-	log.Info("jsut before claims checks")
+	log.Info("jsut before claims checks") //TODO(sszuecs): drop this
 	var allowed bool
 	switch f.typ {
 	case checkOAuthTokenintrospectionAnyClaims:

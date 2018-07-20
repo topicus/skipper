@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -231,7 +232,7 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 				}
 
 				t.Log("got a valid token")
-				d := map[string]interface{}{
+				d := tokenIntrospectionInfo{
 					"uid":        testUID,
 					testRealmKey: testRealm,
 					//"scope":      []string{testScope, testScope2, testScope3},
@@ -244,7 +245,7 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 
 				e := json.NewEncoder(w)
 				err = e.Encode(&d)
-				if err != nil {
+				if err != nil && err != io.EOF {
 					t.Error(err)
 				}
 				t.Log("authserver end")
@@ -254,26 +255,26 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 			t.Logf("testOidcConfig.IntrospectionEndpoint: %s", testOidcConfig.IntrospectionEndpoint)
 			defer authServer.Close()
 
-			var s filters.Spec
+			var spec filters.Spec
 			args := []interface{}{}
 
 			switch ti.authType {
 			case OAuthTokenintrospectionAnyClaimsName:
-				s = NewOAuthTokenintrospectionAnyClaims(testOidcConfig)
+				spec = NewOAuthTokenintrospectionAnyClaims(testOidcConfig)
 			case OAuthTokenintrospectionAllClaimsName:
-				s = NewOAuthTokenintrospectionAllClaims(testOidcConfig)
+				spec = NewOAuthTokenintrospectionAllClaims(testOidcConfig)
 			case OAuthTokenintrospectionAnyKVName:
-				s = NewOAuthTokenintrospectionAnyKV(testOidcConfig)
+				spec = NewOAuthTokenintrospectionAnyKV(testOidcConfig)
 			case OAuthTokenintrospectionAllKVName:
-				s = NewOAuthTokenintrospectionAllKV(testOidcConfig)
+				spec = NewOAuthTokenintrospectionAllKV(testOidcConfig)
 			default:
 				t.Fatalf("FATAL: authType '%s' not supported", ti.authType)
 			}
 
 			args = append(args, ti.args...)
 			fr := make(filters.Registry)
-			fr.Register(s)
-			r := &eskip.Route{Filters: []*eskip.Filter{{Name: s.Name(), Args: args}}, Backend: backend.URL}
+			fr.Register(spec)
+			r := &eskip.Route{Filters: []*eskip.Filter{{Name: spec.Name(), Args: args}}, Backend: backend.URL}
 
 			proxy := proxytest.New(fr, r)
 
@@ -309,10 +310,10 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 				defer rsp.Body.Close()
 
 				if rsp.StatusCode != ti.expected {
-					t.Errorf("name=%s, filter(%s) failed got=%d, expected=%d, route=%s", name, s.Name(), rsp.StatusCode, ti.expected, r)
+					t.Errorf("name=%s, filter(%s) failed got=%d, expected=%d, route=%s", name, spec.Name(), rsp.StatusCode, ti.expected, r)
 					buf := make([]byte, rsp.ContentLength)
-					rsp.Body.Read(buf)
-					t.Logf("response buffer: %s", buf)
+					n, err := rsp.Body.Read(buf)
+					t.Logf("response buffer(%d) (%v): %s", n, err, buf)
 				}
 			}
 		})
@@ -321,18 +322,114 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 
 func Test_validateAnyClaims(t *testing.T) {
 	claims := []string{"email", "name"}
-	f := &tokenintrospectFilter{claims: claims}
-
+	claimsPartialOverlapping := []string{"email", "name", "missing"}
 	info := tokenIntrospectionInfo{
 		"/realm": "/immortals",
-		"claims": map[string]string{
+		"claims": map[string]interface{}{
 			"email": "jdoe@example.com",
 			"name":  "Jane Doe",
 			"uid":   "jdoe",
 		},
 	}
 
-	if !f.validateAnyClaims(info) {
-		t.Error("failed to validate any claims")
+	for _, ti := range []struct {
+		msg      string
+		claims   []string
+		info     tokenIntrospectionInfo
+		expected bool
+	}{{
+		msg:      "validate any, noclaims configured, got no claims",
+		claims:   []string{},
+		info:     tokenIntrospectionInfo{},
+		expected: false,
+	}, {
+		msg:      "validate any, noclaims configured, got claims",
+		claims:   []string{},
+		info:     info,
+		expected: false,
+	}, {
+		msg:      "validate any, claims configured, got no claims",
+		claims:   claims,
+		info:     tokenIntrospectionInfo{},
+		expected: false,
+	}, {
+		msg:      "validate any, claims configured, got not enough claims",
+		claims:   claimsPartialOverlapping,
+		info:     info,
+		expected: true,
+	}, {
+		msg:      "validate any, claims configured, got claims",
+		claims:   claims,
+		info:     info,
+		expected: true,
+	}} {
+		t.Run(ti.msg, func(t *testing.T) {
+			if ti.msg == "" {
+				t.Fatalf("unknown ti: %+v", ti)
+			}
+
+			f := &tokenintrospectFilter{claims: ti.claims}
+			if f.validateAnyClaims(ti.info) != ti.expected {
+				t.Error("failed to validate any claims")
+			}
+
+		})
+	}
+}
+
+func Test_validateAllClaims(t *testing.T) {
+	claims := []string{"email", "name"}
+	claimsPartialOverlapping := []string{"email", "name", "missing"}
+	info := tokenIntrospectionInfo{
+		"/realm": "/immortals",
+		"claims": map[string]interface{}{
+			"email": "jdoe@example.com",
+			"name":  "Jane Doe",
+			"uid":   "jdoe",
+		},
+	}
+
+	for _, ti := range []struct {
+		msg      string
+		claims   []string
+		info     tokenIntrospectionInfo
+		expected bool
+	}{{
+		msg:      "validate all, noclaims configured, got no claims",
+		claims:   []string{},
+		info:     tokenIntrospectionInfo{},
+		expected: true,
+	}, {
+		msg:      "validate all, noclaims configured, got claims",
+		claims:   []string{},
+		info:     info,
+		expected: true,
+	}, {
+		msg:      "validate all, claims configured, got no claims",
+		claims:   claims,
+		info:     tokenIntrospectionInfo{},
+		expected: false,
+	}, {
+		msg:      "validate all, claims configured, got not enough claims",
+		claims:   claimsPartialOverlapping,
+		info:     info,
+		expected: false,
+	}, {
+		msg:      "validate all, claims configured, got claims",
+		claims:   claims,
+		info:     info,
+		expected: true,
+	}} {
+		t.Run(ti.msg, func(t *testing.T) {
+			if ti.msg == "" {
+				t.Fatalf("unknown ti: %+v", ti)
+			}
+
+			f := &tokenintrospectFilter{claims: ti.claims}
+			if f.validateAllClaims(ti.info) != ti.expected {
+				t.Error("failed to validate all claims")
+			}
+
+		})
 	}
 }

@@ -159,6 +159,7 @@ func intersect(left, right []string) bool {
 // jsonGet requests url with access token in the URL query specified
 // by accessTokenKey, if auth was given and writes into doc.
 func jsonGet(url *url.URL, auth string, doc interface{}) error {
+	// TODO(sszuecs) make this optional
 	if auth != "" {
 		q := url.Query()
 		q.Set(accessTokenKey, auth)
