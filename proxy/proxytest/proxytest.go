@@ -62,6 +62,8 @@ func newTestProxy(fr filters.Registry, routingOptions routing.Options, proxyPara
 		panic(err)
 	}
 
+	tl.Infof("routes(%d): %v %v", len(routes), routes[0].Filters, routes[0].Predicates)
+
 	return &TestProxy{
 		URL:     tsp.URL,
 		Log:     tl,

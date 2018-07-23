@@ -239,10 +239,12 @@ func (f *tokenintrospectFilter) validateAnyClaims(info tokenIntrospectionInfo) b
 	for _, wantedClaim := range f.claims {
 		if claims, ok := info["claims"].(map[string]interface{}); ok {
 			if _, ok2 := claims[wantedClaim]; ok2 {
+				log.Info("return True")
 				return true
 			}
 		}
 	}
+	log.Info("return False")
 	return false
 }
 
@@ -341,6 +343,7 @@ func (f *tokenintrospectFilter) Request(ctx filters.FilterContext) {
 	if !allowed {
 		unauthorized(ctx, sub, invalidClaim, f.authClient.url.Hostname())
 	} else {
+		log.Info("authorized")
 		authorized(ctx, sub)
 	}
 	ctx.StateBag()[tokenintrospectionCacheKey] = info

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/zalando/skipper/eskip"
 	"github.com/zalando/skipper/filters"
 	"github.com/zalando/skipper/proxy/proxytest"
@@ -246,9 +247,10 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 				e := json.NewEncoder(w)
 				err = e.Encode(&d)
 				if err != nil && err != io.EOF {
-					t.Error(err)
+					t.Errorf("Failed to json encode: %v", err)
 				}
 				t.Log("authserver end")
+				w.WriteHeader(200)
 			}))
 
 			testOidcConfig.IntrospectionEndpoint = "http://" + authServer.Listener.Addr().String() + testAuthPath
@@ -306,6 +308,7 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 				if err != nil {
 					t.Errorf("failed to get response: %v", err)
 				}
+				log.Infof("rsp: %#v", rsp)
 
 				defer rsp.Body.Close()
 
