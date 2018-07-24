@@ -820,9 +820,7 @@ func (p *Proxy) do(ctx *context) error {
 
 	ctx.applyRoute(route, params, p.flags.PreserveHost())
 
-	p.log.Infof("ctx.route.Filters: %d: %s", len(ctx.route.Filters), ctx.route.Filters[0].Name)
 	processedFilters := p.applyFiltersToRequest(ctx.route.Filters, ctx)
-	p.log.Infof("processedFilters status code: %d", ctx.response.StatusCode)
 	// per route rate limit
 	if settings, allow := p.checkRatelimit(ctx); !allow {
 		rerr := ratelimitError(settings)
