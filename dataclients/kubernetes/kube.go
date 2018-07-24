@@ -631,6 +631,19 @@ func setPath(m PathMode, r *eskip.Route, p string) {
 	}
 }
 
+func (c *Client) getPathMode(i *ingressItem) PathMode {
+	pathMode := c.pathMode
+	pathModeString := i.Metadata.Annotations[pathModeAnnotationKey]
+	if pathModeString != "" {
+		if p, err := ParsePathMode(pathModeString); err != nil {
+			log.Infof("Failed to parse pathmode '%s': %v, fallback to default '%s'", pathModeString, err, pathMode)
+		} else {
+			pathMode = p
+		}
+	}
+	return pathMode
+}
+
 func (c *Client) convertPathRule(
 	ns, name, host string,
 	prule *pathRule,
@@ -901,28 +914,22 @@ func (c *Client) ingressToRoutes(items []*ingressItem) ([]*eskip.Route, error) {
 			// currently handled as mandatory
 			host := []string{"^" + strings.Replace(rule.Host, ".", "[.]", -1) + "$"}
 
-			// add extra routes from optional annotation
-			for idx, r := range extraRoutes {
-				route := *r
-				route.HostRegexps = host
-				route.Id = routeIDForCustom(i.Metadata.Namespace, i.Metadata.Name, route.Id, rule.Host, idx)
-				hostRoutes[rule.Host] = append(hostRoutes[rule.Host], &route)
-			}
-
 			// update Traffic field for each backend
 			computeBackendWeights(backendWeights, rule)
 
 			for _, prule := range rule.Http.Paths {
-				if prule.Backend.Traffic > 0 {
-					pathMode := c.pathMode
-					pathModeString := i.Metadata.Annotations[pathModeAnnotationKey]
-					if pathModeString != "" {
-						var err error
-						if pathMode, err = ParsePathMode(pathModeString); err != nil {
-							return nil, err
-						}
-					}
+				pathMode := c.getPathMode(i)
 
+				// add extra routes from optional annotation
+				for idx, r := range extraRoutes {
+					route := *r
+					route.HostRegexps = host
+					route.Id = routeIDForCustom(i.Metadata.Namespace, i.Metadata.Name, route.Id, rule.Host, idx)
+					setPath(pathMode, &route, prule.Path)
+					hostRoutes[rule.Host] = append(hostRoutes[rule.Host], &route)
+				}
+
+				if prule.Backend.Traffic > 0 {
 					endpoints, err := c.convertPathRule(
 						i.Metadata.Namespace,
 						i.Metadata.Name,
