@@ -241,7 +241,8 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 						validClaim1: validClaim1Value,
 						validClaim2: validClaim2Value,
 					},
-					"sub": "testSub",
+					"sub":    "testSub",
+					"active": true,
 				}
 
 				e := json.NewEncoder(w)
@@ -250,7 +251,6 @@ func TestOAuth2Tokenintrospection(t *testing.T) {
 					t.Errorf("Failed to json encode: %v", err)
 				}
 				t.Log("authserver end")
-				w.WriteHeader(200)
 			}))
 
 			testOidcConfig.IntrospectionEndpoint = "http://" + authServer.Listener.Addr().String() + testAuthPath

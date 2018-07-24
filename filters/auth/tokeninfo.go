@@ -268,9 +268,9 @@ func (f *tokeninfoFilter) Request(ctx filters.FilterContext) {
 
 	if !allowed {
 		unauthorized(ctx, uid, invalidScope, f.authClient.url.Hostname())
-	} else {
-		authorized(ctx, uid)
+		return
 	}
+	authorized(ctx, uid)
 	ctx.StateBag()[tokeninfoCacheKey] = authMap
 }
 
