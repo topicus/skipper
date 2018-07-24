@@ -31,12 +31,6 @@ type (
 	}
 )
 
-func (ac *authClient) getTokeninfo(token string) (map[string]interface{}, error) {
-	var a map[string]interface{}
-	err := jsonGet(ac.url, token, &a)
-	return a, err
-}
-
 // NewOAuthTokeninfoAllScope creates a new auth filter specification
 // to validate authorization for requests. Current implementation uses
 // Bearer tokens to authorize requests and checks that the token

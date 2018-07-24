@@ -56,15 +56,6 @@ type (
 	}
 )
 
-func (ac *authClient) getTokenintrospect(token string) (tokenIntrospectionInfo, error) {
-	info := make(tokenIntrospectionInfo)
-	err := jsonPost(ac.url, token, &info)
-	if err != nil {
-		return nil, err
-	}
-	return info, err
-}
-
 // Active returns token introspection response, which is true if token
 // is not revoked and in the time frame of
 // validity. https://tools.ietf.org/html/rfc7662#section-2.2

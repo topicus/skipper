@@ -1,11 +1,8 @@
 package auth
 
 import (
-	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
-	"net/url"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -55,13 +52,7 @@ const (
 	uidKey         = "uid"
 )
 
-type (
-	authClient struct {
-		url *url.URL
-	}
-
-	kv map[string]string
-)
+type kv map[string]string
 
 var (
 	errUnsupportedClaimSpecified     = errors.New("unsupported claim specified in filter")
@@ -154,69 +145,4 @@ func intersect(left, right []string) bool {
 	}
 
 	return false
-}
-
-// jsonGet requests url with access token in the URL query specified
-// by accessTokenKey, if auth was given and writes into doc.
-func jsonGet(url *url.URL, auth string, doc interface{}) error {
-	// TODO(sszuecs) make this optional
-	if auth != "" {
-		q := url.Query()
-		q.Set(accessTokenKey, auth)
-		url.RawQuery = q.Encode()
-	}
-
-	req, err := http.NewRequest("GET", url.String(), nil)
-	if err != nil {
-		return err
-	}
-
-	rsp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	defer rsp.Body.Close()
-	if rsp.StatusCode != 200 {
-		return errInvalidToken
-	}
-
-	d := json.NewDecoder(rsp.Body)
-	return d.Decode(doc)
-}
-
-// jsonPost requests url with access token in the body, if auth was given and writes into doc.
-func jsonPost(u *url.URL, auth string, doc *tokenIntrospectionInfo) error {
-	body := url.Values{}
-	body.Add(accessTokenKey, auth)
-
-	rsp, err := http.PostForm(u.String(), body)
-	if err != nil {
-		return err
-	}
-
-	defer rsp.Body.Close()
-	if rsp.StatusCode != 200 {
-		return errInvalidToken
-	}
-	buf := make([]byte, rsp.ContentLength)
-	_, err = rsp.Body.Read(buf)
-	if err != nil && err != io.EOF {
-		log.Infof("Failed to read body: %v", err)
-		return err
-	}
-	err = json.Unmarshal(buf, &doc)
-	if err != nil {
-		log.Infof("Failed to unmarshal data: %v", err)
-		return err
-	}
-	return err
-}
-
-func newAuthClient(baseURL string) (*authClient, error) {
-	u, err := url.Parse(baseURL)
-	if err != nil {
-		return nil, err
-	}
-	return &authClient{url: u}, nil
 }
